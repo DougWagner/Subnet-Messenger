@@ -1,0 +1,18 @@
+﻿<Window x:Class="Subnet_Messenger.ServerRunWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Subnet_Messenger"
+        mc:Ignorable="d"
+        Title="ServerRunWindow" Height="347.273" Width="466.061"
+        Closing="ServerRunWindow_Closing">
+    <Grid>
+        <TextBox x:Name="ServerConsole" Margin="130,10,10,50" TextWrapping="Wrap" IsReadOnly="True" VerticalScrollBarVisibility="Auto" TextChanged="ServerConsole_TextChanged"/>
+        <ListBox x:Name="UserList" HorizontalAlignment="Left" Margin="10,24,0,50" Width="115"/>
+        <Label x:Name="label" Content="Users" HorizontalAlignment="Left" Margin="50,0,0,0" VerticalAlignment="Top"/>
+        <Button x:Name="CloseServer" Content="Close Server" HorizontalAlignment="Right" Height="35" Margin="0,0,10,10" VerticalAlignment="Bottom" Width="104" Click="CloseServer_Click"/>
+        <Button x:Name="KickUser" Content="Kick User" HorizontalAlignment="Right" Height="35" Margin="0,0,119,10" VerticalAlignment="Bottom" Width="104" RenderTransformOrigin="-0.112,0.5" Click="KickUser_Click"/>
+
+    </Grid>
+</Window>
