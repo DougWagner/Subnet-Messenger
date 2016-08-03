@@ -29,7 +29,6 @@ namespace Subnet_Messenger
         private CancellationTokenSource cancelSource;
         private CancellationToken cancelToken;
         private bool connected = false;
-        //private List<Thread> windowThreads = new List<Thread>();
         Thread ServerThread = null;
 
         public MainWindow()
@@ -109,7 +108,6 @@ namespace Subnet_Messenger
             }
             try
             {
-                //IPAddress address = IPAddress.Parse(IPInput.Text);
                 client = new TcpClient();
                 await client.ConnectAsync(address, 42424); // Connect to server at specified address.
                 stream = client.GetStream(); // Obtain network stream.
@@ -160,7 +158,6 @@ namespace Subnet_Messenger
 
         private void EnableChatControls()
         {
-            //IPInput.IsEnabled = false;
             UsernameInput.IsEnabled = false;
             ConnectButton.IsEnabled = false;
             ConnectButton.IsDefault = false;
@@ -174,7 +171,6 @@ namespace Subnet_Messenger
             SendButton.IsEnabled = false;
             SendButton.IsDefault = false;
             SendTextBox.IsEnabled = false;
-            //IPInput.IsEnabled = true;
             UsernameInput.IsEnabled = true;
             ConnectButton.IsEnabled = true;
             ConnectButton.IsDefault = true;
@@ -252,45 +248,11 @@ namespace Subnet_Messenger
             Application.Current.MainWindow.Close();
         }
 
-        private void MenuHostServer_Click(object sender, RoutedEventArgs e)
-        {
-            /*
-            var HostWindow = new ServerHostWindow();
-            HostWindow.Show();
-            */
-            Thread HostWindowThread = new Thread(new ThreadStart(HostServerThread));
-            //windowThreads.Add(HostWindowThread);
-            HostWindowThread.SetApartmentState(ApartmentState.STA);
-            HostWindowThread.IsBackground = true;
-            HostWindowThread.Start();
-        }
-
         private void HostServerThread()
         {
             var HostWindow = new ServerHostWindow();
             HostWindow.Show();
             Dispatcher.Run();
-        }
-
-        private void MenuViewServer_Click(object sender, RoutedEventArgs e)
-        {
-            /*
-            var ViewWindow = new ServerViewWindow();
-            ViewWindow.Show();
-            Thread ViewWindowThread = new Thread(new ThreadStart(ViewServerThread));
-            windowThreads.Add(ViewWindowThread);
-            ViewWindowThread.SetApartmentState(ApartmentState.STA);
-            ViewWindowThread.IsBackground = true;
-            ViewWindowThread.Start();
-            */
-            if (UsernameInput.Text == "")
-            {
-                ChatBox.AppendText("Please enter a username before connecting.\r\n");
-                return;
-            }
-            ServerViewWindow window = new ServerViewWindow();
-            window.ShowDialog();
-            Connect(window.SelectedAddress);
         }
 
         private void ViewServerThread()
@@ -302,23 +264,16 @@ namespace Subnet_Messenger
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            /*foreach (Thread thread in windowThreads)
-            {
-                Dispatcher.FromThread(thread).InvokeShutdown();
-            }*/
-            //Dispatcher.FromThread(ServerThread).InvokeShutdown();
             if (ServerThread != null && ServerThread.IsAlive)
             {
                 Dispatcher.FromThread(ServerThread).InvokeShutdown();
             }
             Application.Current.Shutdown();
-            //Environment.Exit(0);
         }
 
         private void ChatBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             ChatBox.ScrollToEnd();
         }
-
     }
 }

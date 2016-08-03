@@ -262,9 +262,6 @@ namespace Subnet_Messenger
             {
                 while (_run)
                 {
-                    //_endpoint = new IPEndPoint(IPAddress.Any, _port);
-                    //_listener.Connect(_endpoint);
-
                     UdpReceiveResult incomingBroadcast = await _listener.ReceiveAsync();
                     string broadcastString = Encoding.Unicode.GetString(incomingBroadcast.Buffer);
                     _window.ServerConsole.AppendText(broadcastString + "\r\n");
@@ -380,12 +377,6 @@ namespace Subnet_Messenger
 
         public void RemoveAll()
         {
-            /*
-            foreach (User user in _users)
-            {
-                user.Stream.Close();
-                user.Client.Close();
-            }*/
             _users.Clear();
         }
 
