@@ -83,14 +83,16 @@ namespace Subnet_Messenger
             _window.UserList.Items.Remove(user);
         }
 
-        public async void Close()
+        public void Close()
         {
             _run = false;
             byte[] cancelFlag = new byte[1];
             cancelFlag[0] = 4;
             foreach (User user in clients)
             {
-                await user.Stream.WriteAsync(cancelFlag, 0, cancelFlag.Length);
+                user.Stream.Write(cancelFlag, 0, cancelFlag.Length);
+                user.Stream.Close();
+                user.Client.Close();
             }
             listener.Stop();
             _udp.Stop();
