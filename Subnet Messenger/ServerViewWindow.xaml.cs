@@ -24,7 +24,29 @@ namespace Subnet_Messenger
     {
         private UdpBroadcaster broadcaster;
         private IPAddress selectedAddress;
+        private bool _found = false;
+        public bool Found
+        {
+            get
+            {
+                return _found;
+            }
+        }
+        public IPAddress SelectedAddress
+        {
+            get
+            {
+                return selectedAddress;
+            }
+        }
         private string selectedName;
+        public string SelectedName
+        {
+            get
+            {
+                return selectedName;
+            }
+        }
         public ServerViewWindow()
         {
             broadcaster = new UdpBroadcaster(this);
@@ -33,7 +55,7 @@ namespace Subnet_Messenger
 
         private void ServerViewWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            broadcaster.Broadcast();
+            _found = broadcaster.Broadcast();
         }
 
         private void ConnectButton_Click(object sender, RoutedEventArgs e)
@@ -60,14 +82,14 @@ namespace Subnet_Messenger
             _window = window;
         }
 
-        public void Broadcast()
+        public bool Broadcast()
         {
             GetBroadcastAddress();
             if (_broadcastAddr == null)
             {
                 MessageBox.Show("Could not obtain broadcast address");
                 _window.Close();
-                return;
+                return false;
             }
             UdpScanner scanner = new UdpScanner(_broadcastAddr);
             List<byte[]> responses = scanner.Scan();
@@ -79,12 +101,13 @@ namespace Subnet_Messenger
             {
                 MessageBox.Show("No servers found.");
                 _window.Close();
-                return;
+                return false;
             }
             foreach (ServerInfoPair server in _servers)
             {
                 _window.ServerList.Items.Add(string.Format("{0}: {1}", server.Name, server.IP.ToString()));
             }
+            return true;
         }
 
         private void GetBroadcastAddress()

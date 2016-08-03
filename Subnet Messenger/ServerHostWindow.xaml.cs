@@ -19,6 +19,7 @@ namespace Subnet_Messenger
     /// </summary>
     public partial class ServerHostWindow : Window
     {
+        bool isHosting = false;
         public ServerHostWindow()
         {
             InitializeComponent();
@@ -48,7 +49,16 @@ namespace Subnet_Messenger
             var RunWindow = new ServerRunWindow(port, ServerNameInput.Text);
             RunWindow.Show();
             RunWindow.Init();
+            isHosting = true;
             Close();
+        }
+
+        private void ServerHostWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (!isHosting)
+            {
+                Dispatcher.InvokeShutdown();
+            }
         }
     }
 }

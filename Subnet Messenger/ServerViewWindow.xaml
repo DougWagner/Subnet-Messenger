@@ -8,7 +8,7 @@
         Title="Server Viewer" Height="320.606" Width="441.818" Loaded="ServerViewWindow_Loaded">
     <Grid>
         <ListBox x:Name="ServerList" Margin="10,10,10,50"/>
-        <Button x:Name="ConnectButton" Content="Connect" HorizontalAlignment="Center" Margin="144,0,150,10" VerticalAlignment="Bottom" Width="143" Height="35" Click="ConnectButton_Click"/>
+        <Button x:Name="ConnectButton" Content="Connect" HorizontalAlignment="Center" Margin="0,0,0,10" VerticalAlignment="Bottom" Width="140" Height="35" Click="ConnectButton_Click"/>
 
     </Grid>
 </Window>

@@ -29,7 +29,8 @@ namespace Subnet_Messenger
         private CancellationTokenSource cancelSource;
         private CancellationToken cancelToken;
         private bool connected = false;
-        private List<Thread> windowThreads = new List<Thread>();
+        //private List<Thread> windowThreads = new List<Thread>();
+        Thread ServerThread = null;
 
         public MainWindow()
         {
@@ -38,11 +39,67 @@ namespace Subnet_Messenger
             cancelToken = cancelSource.Token;
         }
 
-        private async void ConnectButton_Click(object sender, RoutedEventArgs e)
+        private void ConnectButton_Click(object sender, RoutedEventArgs e)
         {
             if (UsernameInput.Text == "")
             {
-                ChatBox.AppendText("Username field is blank.\r\n");
+                ChatBox.AppendText("Please enter a username before connecting.\r\n");
+                return;
+            }
+            ServerViewWindow window = new ServerViewWindow();
+            window.ShowDialog();
+            if (window.Found)
+            {
+                Connect(window.SelectedAddress);
+            }
+        }
+
+        private void HostButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (ServerThread != null && ServerThread.IsAlive)
+            {
+                MessageBox.Show("A server is already hosted on this machine.", "Error");
+                return;
+            }
+            ServerThread = new Thread(new ThreadStart(HostServerThread));
+            ServerThread.SetApartmentState(ApartmentState.STA);
+            ServerThread.IsBackground = true;
+            ServerThread.Start();
+        }
+
+        private async void SendButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (SendTextBox.Text.Length == 0)
+            {
+                return; // Do nothing.
+                /* Is it really possible to do nothing? By "doing nothing", you are actually not doing nothing, 
+                 * because by doing nothing, you are doing something, and that something is nothing. So you are 
+                 * still doing something while doing nothing, making it impossible to truly do nothing.
+                 */
+            }
+            if ((bool)SendToAll.IsChecked)
+            {
+                await SendMessage(SendTextBox.Text, 2);
+            }
+            else if ((bool)SendToOne.IsChecked)
+            {
+                if (Users.SelectedItem == null)
+                {
+                    ChatBox.AppendText("No currently selected user.\r\n");
+                    SendTextBox.Text = "";
+                    return;
+                }
+                await SendMessage(SendTextBox.Text, 3);
+                await SendMessage(Users.SelectedValue.ToString(), 0);
+            }
+            SendTextBox.Text = "";
+        }
+
+        private async void Connect(IPAddress address)
+        {
+            if (address == null)
+            {
+                MessageBox.Show("IPAddress is null for some reason.", "Error");
                 return;
             }
             if (cancelSource.IsCancellationRequested)
@@ -52,7 +109,7 @@ namespace Subnet_Messenger
             }
             try
             {
-                IPAddress address = IPAddress.Parse(IPInput.Text);
+                //IPAddress address = IPAddress.Parse(IPInput.Text);
                 client = new TcpClient();
                 await client.ConnectAsync(address, 42424); // Connect to server at specified address.
                 stream = client.GetStream(); // Obtain network stream.
@@ -80,30 +137,6 @@ namespace Subnet_Messenger
             }
         }
 
-        private async void SendButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (SendTextBox.Text.Length == 0)
-            {
-                return; // Do nothing.
-            }
-            if ((bool)SendToAll.IsChecked)
-            {
-                await SendMessage(SendTextBox.Text, 2);
-            }
-            else if ((bool)SendToOne.IsChecked)
-            {
-                if (Users.SelectedItem == null)
-                {
-                    ChatBox.AppendText("No currently selected user.\r\n");
-                    SendTextBox.Text = "";
-                    return;
-                }
-                await SendMessage(SendTextBox.Text, 3);
-                await SendMessage(Users.SelectedValue.ToString(), 0);
-            }
-            SendTextBox.Text = "";
-        }
-
         private async Task SendMessage(string message, byte flag)
         {
             byte[] stringBytes = Encoding.Unicode.GetBytes(message);
@@ -127,7 +160,7 @@ namespace Subnet_Messenger
 
         private void EnableChatControls()
         {
-            IPInput.IsEnabled = false;
+            //IPInput.IsEnabled = false;
             UsernameInput.IsEnabled = false;
             ConnectButton.IsEnabled = false;
             ConnectButton.IsDefault = false;
@@ -141,7 +174,7 @@ namespace Subnet_Messenger
             SendButton.IsEnabled = false;
             SendButton.IsDefault = false;
             SendTextBox.IsEnabled = false;
-            IPInput.IsEnabled = true;
+            //IPInput.IsEnabled = true;
             UsernameInput.IsEnabled = true;
             ConnectButton.IsEnabled = true;
             ConnectButton.IsDefault = true;
@@ -226,7 +259,7 @@ namespace Subnet_Messenger
             HostWindow.Show();
             */
             Thread HostWindowThread = new Thread(new ThreadStart(HostServerThread));
-            windowThreads.Add(HostWindowThread);
+            //windowThreads.Add(HostWindowThread);
             HostWindowThread.SetApartmentState(ApartmentState.STA);
             HostWindowThread.IsBackground = true;
             HostWindowThread.Start();
@@ -244,12 +277,20 @@ namespace Subnet_Messenger
             /*
             var ViewWindow = new ServerViewWindow();
             ViewWindow.Show();
-            */
             Thread ViewWindowThread = new Thread(new ThreadStart(ViewServerThread));
             windowThreads.Add(ViewWindowThread);
             ViewWindowThread.SetApartmentState(ApartmentState.STA);
             ViewWindowThread.IsBackground = true;
             ViewWindowThread.Start();
+            */
+            if (UsernameInput.Text == "")
+            {
+                ChatBox.AppendText("Please enter a username before connecting.\r\n");
+                return;
+            }
+            ServerViewWindow window = new ServerViewWindow();
+            window.ShowDialog();
+            Connect(window.SelectedAddress);
         }
 
         private void ViewServerThread()
@@ -261,9 +302,14 @@ namespace Subnet_Messenger
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            foreach (Thread thread in windowThreads)
+            /*foreach (Thread thread in windowThreads)
             {
                 Dispatcher.FromThread(thread).InvokeShutdown();
+            }*/
+            //Dispatcher.FromThread(ServerThread).InvokeShutdown();
+            if (ServerThread != null && ServerThread.IsAlive)
+            {
+                Dispatcher.FromThread(ServerThread).InvokeShutdown();
             }
             Application.Current.Shutdown();
             //Environment.Exit(0);
@@ -273,5 +319,6 @@ namespace Subnet_Messenger
         {
             ChatBox.ScrollToEnd();
         }
+
     }
 }

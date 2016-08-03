@@ -81,6 +81,7 @@ namespace Subnet_Messenger
         private void ServerRunWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             _server.Close();
+            Dispatcher.InvokeShutdown();
         }
 
         private void ServerConsole_TextChanged(object sender, TextChangedEventArgs e)

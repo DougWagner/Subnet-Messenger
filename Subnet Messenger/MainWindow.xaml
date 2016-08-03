@@ -14,19 +14,22 @@
         <TextBox x:Name="ChatBox" Margin="150,63,10,65.5" TextWrapping="Wrap" IsReadOnly="True" VerticalScrollBarVisibility="Auto" TextChanged="ChatBox_TextChanged"/>
         <RadioButton x:Name="SendToAll" Content="Send to All" HorizontalAlignment="Left" Margin="10,23,0,0" VerticalAlignment="Top" IsChecked="True"/>
         <RadioButton x:Name="SendToOne" Content="Send to One" HorizontalAlignment="Left" Margin="10,43,0,0" VerticalAlignment="Top"/>
-        <TextBox x:Name="IPInput" HorizontalAlignment="Right" Height="20" Margin="0,27,389,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="183"/>
-        <TextBox x:Name="UsernameInput" HorizontalAlignment="Right" Height="20" Margin="0,27,130,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="183" MaxLength="32"/>
-        <Label x:Name="label" Content="IP Address:" HorizontalAlignment="Right" Margin="0,23,577,0" VerticalAlignment="Top"/>
-        <Label x:Name="label1" Content="Username:" HorizontalAlignment="Right" Margin="0,23,318,0" VerticalAlignment="Top"/>
+        <!--<TextBox x:Name="IPInput" HorizontalAlignment="Right" Height="20" Margin="0,27,389,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="183"/>-->
+        <TextBox x:Name="UsernameInput" HorizontalAlignment="Right" Height="26" Margin="0,28,250,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="182" MaxLength="32" VerticalContentAlignment="Center"/>
+        <!--<Label x:Name="label" Content="IP Address:" HorizontalAlignment="Right" Margin="0,23,577,0" VerticalAlignment="Top"/>-->
+        <Label x:Name="label1" Content="Username:" HorizontalAlignment="Right" Margin="0,28,437,0" VerticalAlignment="Top"/>
         <Button x:Name="ConnectButton" Content="Connect" HorizontalAlignment="Right" Height="35" Margin="0,23,10,0" VerticalAlignment="Top" Width="115" IsDefault="True" Click="ConnectButton_Click" RenderTransformOrigin="0.524,0.471"/>
+        <Button x:Name="HostButton" Content="Host" HorizontalAlignment="Right" Margin="0,23,130,0" VerticalAlignment="Top" Width="115" Height="35" Click="HostButton_Click"/>
         <!--<DockPanel Height="18" LastChildFill="False" VerticalAlignment="Top" Width="800">-->
         <Menu x:Name="menu" Height="18" VerticalAlignment="Top" Margin="0,0,0,0">
             <MenuItem Header="File">
                 <MenuItem x:Name="MenuExit" Header="Exit" Click="MenuExit_Click"/>
             </MenuItem>
             <MenuItem Header="Server">
-                <MenuItem x:Name="MenuHostServer" Header="Open Server Host Window" Click="MenuHostServer_Click"/>
-                <MenuItem x:Name="MenuViewServer" Header="Open Server View Window" Click="MenuViewServer_Click"/>
+                <!--<MenuItem x:Name="MenuHostServer" Header="Host a server" Click="MenuHostServer_Click"/>-->
+                <MenuItem x:Name="MenuHostServer" Header="Host a server" Click="HostButton_Click"/>
+                <!--<MenuItem x:Name="MenuViewServer" Header="Connect to a server" Click="MenuViewServer_Click"/>-->
+                <MenuItem x:Name="MenuViewServer" Header="Connect to a server" Click="ConnectButton_Click"/>
             </MenuItem>
         </Menu>
         <!--</DockPanel>-->

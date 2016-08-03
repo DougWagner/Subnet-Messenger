@@ -5,7 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Subnet_Messenger"
         mc:Ignorable="d"
-        Title="Server Host Window" Height="107.272" Width="398.182" ResizeMode="CanMinimize">
+        Title="Server Host Window" Height="107.272" Width="398.182" ResizeMode="CanMinimize"
+        Closing="ServerHostWindow_Closing">
     <Grid>
         <Button x:Name="HostButton" Content="Host Server" HorizontalAlignment="Left" Height="53" Margin="299,14,0,0" VerticalAlignment="Top" Width="84" Click="HostButton_Click" IsDefault="True"/>
         <Label x:Name="label" Content="Server Name:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
