@@ -53,6 +53,13 @@ namespace Subnet_Messenger
             }
         }
 
+        private void DisconnectButton_Click(object sender, RoutedEventArgs e)
+        {
+            byte[] disconnectFlag = new byte[1];
+            disconnectFlag[0] = 4;
+            stream.Write(disconnectFlag, 0, disconnectFlag.Length);
+        }
+
         private void HostButton_Click(object sender, RoutedEventArgs e)
         {
             if (ServerThread != null && ServerThread.IsAlive)
@@ -159,7 +166,10 @@ namespace Subnet_Messenger
         private void EnableChatControls()
         {
             UsernameInput.IsEnabled = false;
-            ConnectButton.IsEnabled = false;
+            //ConnectButton.IsEnabled = false;
+            ConnectButton.Content = "Disconnect";
+            ConnectButton.Click -= ConnectButton_Click;
+            ConnectButton.Click += DisconnectButton_Click;
             ConnectButton.IsDefault = false;
             SendButton.IsEnabled = true;
             SendButton.IsDefault = true;
@@ -172,7 +182,10 @@ namespace Subnet_Messenger
             SendButton.IsDefault = false;
             SendTextBox.IsEnabled = false;
             UsernameInput.IsEnabled = true;
-            ConnectButton.IsEnabled = true;
+            //ConnectButton.IsEnabled = true;
+            ConnectButton.Content = "Connect";
+            ConnectButton.Click -= DisconnectButton_Click;
+            ConnectButton.Click += ConnectButton_Click;
             ConnectButton.IsDefault = true;
             Users.Items.Clear();
         }
@@ -193,6 +206,9 @@ namespace Subnet_Messenger
                     await ProcessUserDisconnectMessage();
                     break;
                 case 4:
+                    ProcessDisconnect();
+                    break;
+                case 5:
                     ProcessServerClose();
                     break;
                 default: // Invalid flag.
@@ -218,6 +234,15 @@ namespace Subnet_Messenger
         {
             string message = await ReadMessageBytes();
             Users.Items.Remove(message); // Remove user from list of users.
+        }
+
+        private void ProcessDisconnect()
+        {
+            connected = false;
+            stream.Close();
+            client.Close();
+            DisableChatControls();
+            ChatBox.AppendText("You have disconnected from the server.\r\n");
         }
 
         private void ProcessServerClose()
@@ -255,13 +280,6 @@ namespace Subnet_Messenger
             Dispatcher.Run();
         }
 
-        private void ViewServerThread()
-        {
-            var ViewWindow = new ServerViewWindow();
-            ViewWindow.Show();
-            Dispatcher.Run();
-        }
-
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             if (ServerThread != null && ServerThread.IsAlive)
@@ -276,4 +294,6 @@ namespace Subnet_Messenger
             ChatBox.ScrollToEnd();
         }
     }
+
+    enum ClientMessageFlag : byte { StandardMessage = 1, UsernameMessage, RemoteUserDisconnect, UserDisconnect, ServerClose };
 }

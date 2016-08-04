@@ -87,7 +87,7 @@ namespace Subnet_Messenger
         {
             _run = false;
             byte[] cancelFlag = new byte[1];
-            cancelFlag[0] = 4;
+            cancelFlag[0] = 5;
             foreach (User user in clients)
             {
                 user.Stream.Write(cancelFlag, 0, cancelFlag.Length);
@@ -147,6 +147,9 @@ namespace Subnet_Messenger
                 case 3: // Private chat message from client.
                     await HandlePrivateMessage(user);
                     break;
+                case 4:
+                    HandleUserDisconnect(user);
+                    break;
                 default: // Invalid signal.
                     _window.ServerConsole.AppendText("Invalid Message Flag\r\n");
                     break;
@@ -193,6 +196,17 @@ namespace Subnet_Messenger
             byte[] returnMessageToSendingBytes = Encoding.Unicode.GetBytes(returnMessageToSending);
             await SendReturnMessageOne(recievingUser, returnMessageToRecievingBytes, 1);
             await SendReturnMessageOne(user, returnMessageToSendingBytes, 1);
+        }
+
+        private void HandleUserDisconnect(User user)
+        {
+            byte[] disconnectFlag = new byte[1];
+            disconnectFlag[0] = 4;
+            user.Stream.Write(disconnectFlag, 0, disconnectFlag.Length);
+            user.Stream.Close();
+            user.Client.Close();
+            _window.UserList.Items.Remove(user.Name);
+            clients.RemoveUser(user);
         }
 
         private async Task SendReturnMessageAll(byte[] message, byte flag)
@@ -392,4 +406,6 @@ namespace Subnet_Messenger
             return ((IEnumerable<User>)_users).GetEnumerator();
         }
     }
+
+    enum ServerMessageFlag : byte { InitialConnection = 1, StandardMessage, PrivateMessage, DisconnectMessage };
 }
