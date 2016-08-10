@@ -67,30 +67,28 @@ namespace Subnet_Messenger
                 return;
             }
             string kickMessage = "You have been kicked from the server. Next time, don't be a dick.";
-            byte[] bytes = Encoding.Unicode.GetBytes(kickMessage);
-            await SendReturnMessageOne(kickedUser, bytes, 1);
-            byte[] cancelFlag = new byte[1];
-            cancelFlag[0] = 4;
-            await kickedUser.Stream.WriteAsync(cancelFlag, 0, cancelFlag.Length);
+            MessageData kickMessageData = new MessageData(kickMessage, (byte)ToClientMessageFlag.StandardMessage);
+            await StreamHelper.SendAsync(kickedUser.Stream, kickMessageData);
+            MessageData cancelMessage = new MessageData("", (byte)ToClientMessageFlag.UserDisconnect);
+            await StreamHelper.SendAsync(kickedUser.Stream, cancelMessage);
             kickedUser.Stream.Close();
             kickedUser.Client.Close();
             clients.RemoveUser(kickedUser);
-            kickMessage = string.Format("{0} has been kicked from the server for being a dick.", user);
-            bytes = Encoding.Unicode.GetBytes(kickMessage);
-            await SendReturnMessageAll(bytes, 1);
-            byte[] userBytes = Encoding.Unicode.GetBytes(user);
-            await SendReturnMessageAll(userBytes, 3);
+            string kickedMessage = string.Format("{0} has been kicked from the server for being a dick.", user);
+            MessageData kickedMessageData = new MessageData(kickedMessage, (byte)ToClientMessageFlag.StandardMessage);
+            await SendToAll(kickedMessageData);
+            MessageData kickedUserData = new MessageData(user, (byte)ToClientMessageFlag.RemoteUserDisconnect);
+            await SendToAll(kickedUserData);
             _window.UserList.Items.Remove(user);
         }
 
         public void Close()
         {
             _run = false;
-            byte[] cancelFlag = new byte[1];
-            cancelFlag[0] = 5;
+            MessageData cancelData = new MessageData("", (byte)ToClientMessageFlag.ServerClose);
             foreach (User user in clients)
             {
-                user.Stream.Write(cancelFlag, 0, cancelFlag.Length);
+                StreamHelper.Send(user.Stream, cancelData);
                 user.Stream.Close();
                 user.Client.Close();
             }
@@ -120,12 +118,12 @@ namespace Subnet_Messenger
                     user.Client.Close(); // Close the client.
                     string disconnectingUser = user.Name; // Obtain username of disconnected user.
                     _window.UserList.Items.Remove(disconnectingUser);
-                    string message = string.Format("{0}: {1} disconnected from the network", DateTime.Now.ToShortTimeString(), disconnectingUser);
-                    byte[] messageBytes = Encoding.Unicode.GetBytes(message); // Encode disconnect message to byte array.
                     clients.RemoveUser(user); // Remove client from list of clients.
-                    await SendReturnMessageAll(messageBytes, 1); // Send standard disconnect message to clients.
-                    byte[] userBytes = Encoding.Unicode.GetBytes(disconnectingUser);
-                    await SendReturnMessageAll(userBytes, 3); // Send User List disconnect message to clients.
+                    string message = string.Format("{0}: {1} disconnected from the network", DateTime.Now.ToShortTimeString(), disconnectingUser);
+                    MessageData standardMessage = new MessageData(message, (byte)ToClientMessageFlag.StandardMessage);
+                    await SendToAll(standardMessage); // Send standard disconnect message to clients.
+                    MessageData disconnectedMessage = new MessageData(disconnectingUser, (byte)ToClientMessageFlag.RemoteUserDisconnect);
+                    await SendToAll(disconnectedMessage);// Send User List disconnect message to clients.
                     break;
                 }
             }
@@ -133,21 +131,19 @@ namespace Subnet_Messenger
 
         private async Task WaitForMessages(User user)
         {
-            byte[] messageFlag = new byte[1];
-            // Read just the first byte from stream to determine type of message.
-            int x = await user.Stream.ReadAsync(messageFlag, 0, messageFlag.Length, closingToken);
-            switch (messageFlag[0])
+            MessageData incomingMessage = await StreamHelper.ReadAsync(user.Stream);
+            switch ((ToServerMessageFlag)incomingMessage.Flag)
             {
-                case 1: // Initial connection to server from client.
-                    await HandleInitialConnection(user);
+                case ToServerMessageFlag.InitialConnection: // Initial connection to server from client.
+                    await HandleInitialConnection(user, incomingMessage);
                     break;
-                case 2: // Standard chat message from client.
-                    await HandleMessage(user);
+                case ToServerMessageFlag.StandardMessage: // Standard chat message from client.
+                    await HandleMessage(user, incomingMessage);
                     break;
-                case 3: // Private chat message from client.
-                    await HandlePrivateMessage(user);
+                case ToServerMessageFlag.PrivateMessage: // Private chat message from client.
+                    await HandlePrivateMessage(user, incomingMessage);
                     break;
-                case 4:
+                case ToServerMessageFlag.DisconnectMessage:
                     HandleUserDisconnect(user);
                     break;
                 default: // Invalid signal.
@@ -156,98 +152,62 @@ namespace Subnet_Messenger
             }
         }
 
-        private async Task HandleInitialConnection(User user)
+        private async Task HandleInitialConnection(User user, MessageData data)
         {
-            string message = await ReadMessageBytes(user);
-            user.SetName(message);
-            byte[] username = Encoding.Unicode.GetBytes(message);
-            await SendReturnMessageAll(username, 2); // Send message to update User list in clients, excluding new client.
+            user.SetName(data.Message);
+            MessageData username = new MessageData(data.Message, (byte)ToClientMessageFlag.UsernameMessage);
+            await SendToAll(username);// Send message to update User list in clients, excluding new client.
             foreach (var client in clients) // Send all currently connected usernames to newly connected client.
             {
-                byte[] clientName = Encoding.Unicode.GetBytes(client.Name);
-                await SendReturnMessageOne(user, clientName, 2);
+                MessageData clientName = new MessageData(client.Name, (byte)ToClientMessageFlag.UsernameMessage);
+                await StreamHelper.SendAsync(user.Stream, clientName);
             }
-            await SendReturnMessageOne(user, username, 2); // Needed because connecting client is not added to client list yet.
+            await StreamHelper.SendAsync(user.Stream, username); // Needed because connecting client is not added to client list yet.
             clients.AddUser(user);
             _window.UserList.Items.Add(user.Name);
-            string returnMessage = string.Format("{0}: User {1} connected!", DateTime.Now.ToShortTimeString(), message);
-            byte[] returnBytes = Encoding.Unicode.GetBytes(returnMessage);
-            await SendReturnMessageAll(returnBytes, 1); // Send standard message to clients to show new user connected.
+            string returnMessage = string.Format("{0}: User {1} connected!", DateTime.Now.ToShortTimeString(), data.Message);
+            MessageData returnMessageData = new MessageData(returnMessage, (byte)ToClientMessageFlag.StandardMessage);
+            await SendToAll(returnMessageData); // Send standard message to clients to show new user connected.
         }
 
-        private async Task HandleMessage(User user)
+        private async Task HandleMessage(User user, MessageData data)
         {
-            string message = await ReadMessageBytes(user);
             string sendingUser = user.Name;
-            string returnMessage = string.Format("{0} {1}: {2}", DateTime.Now.ToShortTimeString(), sendingUser, message);
-            byte[] returnBytes = Encoding.Unicode.GetBytes(returnMessage);
-            await SendReturnMessageAll(returnBytes, 1); // Send message to all users.
+            string returnMessage = string.Format("{0} {1}: {2}", DateTime.Now.ToShortTimeString(), sendingUser, data.Message);
+            MessageData returnMessageData = new MessageData(returnMessage, (byte)ToClientMessageFlag.StandardMessage);
+            await SendToAll(returnMessageData);
         }
 
-        private async Task HandlePrivateMessage(User user)
+        private async Task HandlePrivateMessage(User user, MessageData data)
         {
-            string message = await ReadMessageBytes(user);
             string sendingUsername = user.Name;
-            string recievingUsername = await ReadMessageBytes(user);
+            string recievingUsername = data.Message;
             User recievingUser = clients.GetUserByName(recievingUsername);
-            string returnMessageToRecieving = string.Format("{0}: Private Message From {1}: {2}", DateTime.Now.ToShortTimeString(), sendingUsername, message);
-            string returnMessageToSending = string.Format("{0}: Private Message To {1}: {2}", DateTime.Now.ToShortTimeString(), recievingUsername, message);
-            byte[] returnMessageToRecievingBytes = Encoding.Unicode.GetBytes(returnMessageToRecieving);
-            byte[] returnMessageToSendingBytes = Encoding.Unicode.GetBytes(returnMessageToSending);
-            await SendReturnMessageOne(recievingUser, returnMessageToRecievingBytes, 1);
-            await SendReturnMessageOne(user, returnMessageToSendingBytes, 1);
+            MessageData message = await StreamHelper.ReadAsync(user.Stream);
+            string returnMessageToRecipient = string.Format("{0}: Private Message From {1}: {2}", DateTime.Now.ToShortTimeString(), sendingUsername, message.Message);
+            string returnMessageToSender = string.Format("{0}: Private Message To {1}: {2}", DateTime.Now.ToShortTimeString(), recievingUsername, message.Message);
+            MessageData toRecipient = new MessageData(returnMessageToRecipient, (byte)ToClientMessageFlag.StandardMessage);
+            MessageData toSender = new MessageData(returnMessageToSender, (byte)ToClientMessageFlag.StandardMessage);
+            await StreamHelper.SendAsync(recievingUser.Stream, toRecipient);
+            await StreamHelper.SendAsync(user.Stream, toSender);
         }
 
         private void HandleUserDisconnect(User user)
         {
-            byte[] disconnectFlag = new byte[1];
-            disconnectFlag[0] = 4;
-            user.Stream.Write(disconnectFlag, 0, disconnectFlag.Length);
+            MessageData disconnectMessage = new MessageData("", (byte)ToClientMessageFlag.UserDisconnect);
+            StreamHelper.Send(user.Stream, disconnectMessage);
             user.Stream.Close();
             user.Client.Close();
             _window.UserList.Items.Remove(user.Name);
             clients.RemoveUser(user);
         }
 
-        private async Task SendReturnMessageAll(byte[] message, byte flag)
+        private async Task SendToAll(MessageData message)
         {
-            /* Index 0 in sendMessage reserved for message type flag, and indices 1-4 are reserved for
-               the size of the string being sent. */
-            byte[] sendMessage = new byte[message.Length + 5];
-            sendMessage[0] = flag;
-            byte[] messageSize = BitConverter.GetBytes(message.Length);
-            messageSize.CopyTo(sendMessage, 1);
-            message.CopyTo(sendMessage, 5);
             foreach (var user in clients)
             {
-                await user.Stream.WriteAsync(sendMessage, 0, sendMessage.Length);
+                await StreamHelper.SendAsync(user.Stream, message);
             }
-        }
-
-        private async Task SendReturnMessageOne(User user, byte[] message, byte flag)
-        {
-            /* Index 0 in sendMessage reserved for message type flag, and indices 1-4 are reserved for
-               the size of the string being sent. */
-            byte[] sendMessage = new byte[message.Length + 5];
-            sendMessage[0] = flag;
-            byte[] messageSize = BitConverter.GetBytes(message.Length);
-            messageSize.CopyTo(sendMessage, 1);
-            message.CopyTo(sendMessage, 5);
-            await user.Stream.WriteAsync(sendMessage, 0, sendMessage.Length);
-        }
-
-        private async Task<string> ReadMessageBytes(User user)
-        {
-            int x, size;
-            byte[] sizeBytes = new byte[4];
-            // Read 4 bytes to determine message size.
-            x = await user.Stream.ReadAsync(sizeBytes, 0, sizeBytes.Length, closingToken);
-            size = BitConverter.ToInt32(sizeBytes, 0);
-            byte[] buffer = new byte[size];
-            string message = null;
-            x = await user.Stream.ReadAsync(buffer, 0, buffer.Length, closingToken);
-            message += Encoding.Unicode.GetString(buffer);
-            return message;
         }
     }
 
@@ -256,7 +216,6 @@ namespace Subnet_Messenger
         private IPAddress _address;
         private int _port;
         private string _name;
-        //private IPEndPoint _endpoint;
         private UdpClient _listener;
         private bool _run = true;
         private ServerRunWindow _window;
@@ -407,5 +366,5 @@ namespace Subnet_Messenger
         }
     }
 
-    enum ServerMessageFlag : byte { InitialConnection = 1, StandardMessage, PrivateMessage, DisconnectMessage };
+    enum ToServerMessageFlag : byte { InitialConnection = 1, StandardMessage, PrivateMessage, DisconnectMessage };
 }

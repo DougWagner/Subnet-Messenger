@@ -55,6 +55,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="MessageData.cs" />
     <Compile Include="NetInterfacePickerWindow.xaml.cs">
       <DependentUpon>NetInterfacePickerWindow.xaml</DependentUpon>
     </Compile>
@@ -67,6 +68,7 @@
     <Compile Include="ServerViewWindow.xaml.cs">
       <DependentUpon>ServerViewWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="StreamHelper.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

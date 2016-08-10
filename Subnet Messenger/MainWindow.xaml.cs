@@ -55,9 +55,8 @@ namespace Subnet_Messenger
 
         private void DisconnectButton_Click(object sender, RoutedEventArgs e)
         {
-            byte[] disconnectFlag = new byte[1];
-            disconnectFlag[0] = 4;
-            stream.Write(disconnectFlag, 0, disconnectFlag.Length);
+            MessageData disconnectMessage = new MessageData("", (byte)ToServerMessageFlag.DisconnectMessage);
+            StreamHelper.Send(stream, disconnectMessage);
         }
 
         private void HostButton_Click(object sender, RoutedEventArgs e)
@@ -85,7 +84,8 @@ namespace Subnet_Messenger
             }
             if ((bool)SendToAll.IsChecked)
             {
-                await SendMessage(SendTextBox.Text, 2);
+                MessageData message = new MessageData(SendTextBox.Text, (byte)ToServerMessageFlag.StandardMessage);
+                await StreamHelper.SendAsync(stream, message);
             }
             else if ((bool)SendToOne.IsChecked)
             {
@@ -95,8 +95,10 @@ namespace Subnet_Messenger
                     SendTextBox.Text = "";
                     return;
                 }
-                await SendMessage(SendTextBox.Text, 3);
-                await SendMessage(Users.SelectedValue.ToString(), 0);
+                MessageData recipient = new MessageData(Users.SelectedValue.ToString(), (byte)ToServerMessageFlag.PrivateMessage);
+                MessageData text = new MessageData(SendTextBox.Text, 0);
+                await StreamHelper.SendAsync(stream, recipient);
+                await StreamHelper.SendAsync(stream, text);
             }
             SendTextBox.Text = "";
         }
@@ -118,7 +120,8 @@ namespace Subnet_Messenger
                 client = new TcpClient();
                 await client.ConnectAsync(address, 42424); // Connect to server at specified address.
                 stream = client.GetStream(); // Obtain network stream.
-                await SendMessage(UsernameInput.Text, 1); // Send initial connection message.
+                MessageData initialMessage = new MessageData(UsernameInput.Text, (byte)ToServerMessageFlag.InitialConnection);
+                await StreamHelper.SendAsync(stream, initialMessage); // Send initial connection message.
             }
             catch (Exception ex)
             {
@@ -142,31 +145,9 @@ namespace Subnet_Messenger
             }
         }
 
-        private async Task SendMessage(string message, byte flag)
-        {
-            byte[] stringBytes = Encoding.Unicode.GetBytes(message);
-            byte[] sendMessage;
-            byte[] messageSize = BitConverter.GetBytes(stringBytes.Length);
-            if (flag == 0)
-            {
-                sendMessage = new byte[stringBytes.Length + 4];
-                messageSize.CopyTo(sendMessage, 0);
-                stringBytes.CopyTo(sendMessage, 4);
-            }
-            else
-            {
-                sendMessage = new byte[stringBytes.Length + 5];
-                sendMessage[0] = flag;
-                messageSize.CopyTo(sendMessage, 1);
-                stringBytes.CopyTo(sendMessage, 5);
-            }
-            await stream.WriteAsync(sendMessage, 0, sendMessage.Length);
-        }
-
         private void EnableChatControls()
         {
             UsernameInput.IsEnabled = false;
-            //ConnectButton.IsEnabled = false;
             ConnectButton.Content = "Disconnect";
             ConnectButton.Click -= ConnectButton_Click;
             ConnectButton.Click += DisconnectButton_Click;
@@ -182,7 +163,6 @@ namespace Subnet_Messenger
             SendButton.IsDefault = false;
             SendTextBox.IsEnabled = false;
             UsernameInput.IsEnabled = true;
-            //ConnectButton.IsEnabled = true;
             ConnectButton.Content = "Connect";
             ConnectButton.Click -= DisconnectButton_Click;
             ConnectButton.Click += ConnectButton_Click;
@@ -192,23 +172,22 @@ namespace Subnet_Messenger
 
         private async Task WaitForMessages()
         {
-            byte[] messageFlag = new byte[1];
-            int x = await stream.ReadAsync(messageFlag, 0, messageFlag.Length, cancelToken);
-            switch (messageFlag[0])
+            MessageData incomingMessage = await StreamHelper.ReadAsync(stream);
+            switch ((ToClientMessageFlag)incomingMessage.Flag)
             {
-                case 1: // Standard message for ChatText box.
-                    await ProcessStandardMessage();
+                case ToClientMessageFlag.StandardMessage: // Standard message for ChatText box.
+                    ProcessStandardMessage(incomingMessage);
                     break;
-                case 2: // Username message for Users list.
-                    await ProcessUsernameMessage();
+                case ToClientMessageFlag.UsernameMessage: // Username message for Users list.
+                    ProcessUsernameMessage(incomingMessage);
                     break;
-                case 3: // Username disconnect message for Users list.
-                    await ProcessUserDisconnectMessage();
+                case ToClientMessageFlag.RemoteUserDisconnect: // Username disconnect message for Users list.
+                    ProcessUserDisconnectMessage(incomingMessage);
                     break;
-                case 4:
+                case ToClientMessageFlag.UserDisconnect:
                     ProcessDisconnect();
                     break;
-                case 5:
+                case ToClientMessageFlag.ServerClose:
                     ProcessServerClose();
                     break;
                 default: // Invalid flag.
@@ -217,28 +196,25 @@ namespace Subnet_Messenger
             }
         }
 
-        private async Task ProcessStandardMessage()
+        private void ProcessStandardMessage(MessageData data)
         {
-            string message = await ReadMessageBytes();
-            message = message + "\r\n";
-            ChatBox.AppendText(message); // Append message to chat box.
+            ChatBox.AppendText(data.Message + "\r\n"); // Append message to chat box.
         }
 
-        private async Task ProcessUsernameMessage()
+        private void ProcessUsernameMessage(MessageData data)
         {
-            string message = await ReadMessageBytes();
-            Users.Items.Add(message); // Add user to list of users.
+            Users.Items.Add(data.Message); // Add user to list of users.
         }
 
-        private async Task ProcessUserDisconnectMessage()
+        private void ProcessUserDisconnectMessage(MessageData data)
         {
-            string message = await ReadMessageBytes();
-            Users.Items.Remove(message); // Remove user from list of users.
+            Users.Items.Remove(data.Message); // Remove user from list of users.
         }
 
         private void ProcessDisconnect()
         {
             connected = false;
+            cancelSource.Cancel();
             stream.Close();
             client.Close();
             DisableChatControls();
@@ -253,19 +229,6 @@ namespace Subnet_Messenger
             client.Close();
             ChatBox.AppendText("The server has been closed. You have been disconnected.\r\n");
             DisableChatControls();
-        }
-
-        private async Task<string> ReadMessageBytes()
-        {
-            int x, size;
-            byte[] sizeBytes = new byte[4];
-            x = await stream.ReadAsync(sizeBytes, 0, sizeBytes.Length, cancelToken);
-            size = BitConverter.ToInt32(sizeBytes, 0);
-            byte[] buffer = new byte[size];
-            string message = null;
-            x = await stream.ReadAsync(buffer, 0, buffer.Length, cancelToken);
-            message += Encoding.Unicode.GetString(buffer);
-            return message;
         }
 
         private void MenuExit_Click(object sender, RoutedEventArgs e)
@@ -295,5 +258,5 @@ namespace Subnet_Messenger
         }
     }
 
-    enum ClientMessageFlag : byte { StandardMessage = 1, UsernameMessage, RemoteUserDisconnect, UserDisconnect, ServerClose };
+    enum ToClientMessageFlag : byte { StandardMessage = 1, UsernameMessage, RemoteUserDisconnect, UserDisconnect, ServerClose };
 }
