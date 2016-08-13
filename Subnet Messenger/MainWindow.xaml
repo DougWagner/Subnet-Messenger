@@ -9,8 +9,8 @@
         Closing="MainWindow_Closing">
     <Grid>
         <Button x:Name="SendButton" Content="Send" HorizontalAlignment="Right" Height="50" Margin="0,0,10,10.5" VerticalAlignment="Bottom" Width="100" IsEnabled="False" Click="SendButton_Click"/>
-        <TextBox x:Name="SendTextBox" Height="50" Margin="150,0,115,10.5" TextWrapping="Wrap" VerticalAlignment="Bottom" IsEnabled="False"/>
-        <ListBox x:Name="Users" HorizontalAlignment="Left" Margin="10,89,0,10.5" Width="135"/>
+        <TextBox x:Name="SendTextBox" Height="50" Margin="63,0,115,10.5" TextWrapping="Wrap" VerticalAlignment="Bottom" IsEnabled="False"/>
+        <ListBox x:Name="Users" HorizontalAlignment="Left" Margin="10,89,0,65.5" Width="135"/>
         <TextBox x:Name="ChatBox" Margin="150,63,10,65.5" TextWrapping="Wrap" IsReadOnly="True" VerticalScrollBarVisibility="Auto" TextChanged="ChatBox_TextChanged"/>
         <RadioButton x:Name="SendToAll" Content="Send to All" HorizontalAlignment="Left" Margin="10,23,0,0" VerticalAlignment="Top" IsChecked="True"/>
         <RadioButton x:Name="SendToOne" Content="Send to One" HorizontalAlignment="Left" Margin="10,43,0,0" VerticalAlignment="Top"/>
@@ -34,6 +34,13 @@
         </Menu>
         <!--</DockPanel>-->
         <Label x:Name="label2" Content="Connected Users" HorizontalAlignment="Left" Margin="28,63,0,0" VerticalAlignment="Top"/>
+        <ComboBox x:Name="EmojiBox" HorizontalAlignment="Left" Height="50" Margin="10,0,0,10.5" VerticalAlignment="Bottom" Width="48" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" FontSize="16" IsEnabled="False" SelectionChanged="EmojiBox_SelectionChanged" DropDownOpened="EmojiBox_DropDownOpened" DropDownClosed="EmojiBox_DropDownClosed">
+            <ComboBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="10"/>
+                </ItemsPanelTemplate>
+            </ComboBox.ItemsPanel>
+        </ComboBox>
 
     </Grid>
 </Window>

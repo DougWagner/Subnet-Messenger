@@ -16,6 +16,8 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 using System.Net;
 using System.Net.Sockets;
+using MS.Internal.AppModel;
+using MS.Win32;
 
 namespace Subnet_Messenger
 {
@@ -36,6 +38,14 @@ namespace Subnet_Messenger
             InitializeComponent();
             cancelSource = new CancellationTokenSource();
             cancelToken = cancelSource.Token;
+            foreach (string e in Emoji.EmojiList)
+            {
+                EmojiBox.Items.Add(e);
+            }
+            // There is probably a better way to do this...
+            EmojiBox.SelectionChanged -= EmojiBox_SelectionChanged;
+            EmojiBox.SelectedIndex = 0;
+            EmojiBox.SelectionChanged += EmojiBox_SelectionChanged;
         }
 
         private void ConnectButton_Click(object sender, RoutedEventArgs e)
@@ -155,6 +165,7 @@ namespace Subnet_Messenger
             SendButton.IsEnabled = true;
             SendButton.IsDefault = true;
             SendTextBox.IsEnabled = true;
+            EmojiBox.IsEnabled = true;
         }
 
         private void DisableChatControls()
@@ -167,6 +178,7 @@ namespace Subnet_Messenger
             ConnectButton.Click -= DisconnectButton_Click;
             ConnectButton.Click += ConnectButton_Click;
             ConnectButton.IsDefault = true;
+            EmojiBox.IsEnabled = false;
             Users.Items.Clear();
         }
 
@@ -255,6 +267,46 @@ namespace Subnet_Messenger
         private void ChatBox_TextChanged(object sender, TextChangedEventArgs e)
         {
             ChatBox.ScrollToEnd();
+        }
+
+        // There is also probably a better way to do this too.
+        private void EmojiBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            SendTextBox.AppendText(Emoji.EmojiList.ElementAt(EmojiBox.SelectedIndex));
+        }
+
+        private void EmojiBox_DropDownOpened(object sender, EventArgs e)
+        {
+            EmojiBox.SelectionChanged -= EmojiBox_SelectionChanged;
+            EmojiBox.SelectedIndex = -1;
+            EmojiBox.SelectionChanged += EmojiBox_SelectionChanged;
+        }
+
+        private void EmojiBox_DropDownClosed(object sender, EventArgs e)
+        {
+            EmojiBox.SelectionChanged -= EmojiBox_SelectionChanged;
+            EmojiBox.SelectedIndex = 0;
+            EmojiBox.SelectionChanged += EmojiBox_SelectionChanged;
+        }
+    }
+
+    static class Emoji
+    {
+        private static readonly List<string> _emojiList = new List<string>
+        {
+            "😀", "😁", "😂", "😃", "😄", "😅", "😆", "😉", "😊", "😋", "😎", "😍",
+            "😘", "😗", "😙", "😚", "☺️", "🙂", "😇", "😐", "😑", "😶", "🙄", "😏",
+            "😣", "😥", "😮", "😯", "😪", "😫", "😴", "😌", "😛", "😜", "😝", "😒",
+            "😓", "😔", "😕", "🙃", "😲", "😷", "☹", "🙁", "😖", "😞", "😟", "😤",
+            "😢", "😦", "😧", "😨", "😩", "😬", "😰", "😱", "😳", "😵", "😡", "😈",
+            "👿", "💀", "👻", "👽", "💩"
+        };
+        public static List<string> EmojiList
+        {
+            get
+            {
+                return _emojiList;
+            }
         }
     }
 
